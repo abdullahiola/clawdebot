@@ -1,0 +1,42 @@
+[
+  {
+    "timestamp": "2026-01-24T20:26:19.517844",
+    "type": "analyze",
+    "description": "Ran brief analysis",
+    "details": {
+      "mode": "brief",
+      "analysis_text": "Not enough trade data yet for analysis. Need at least 5 trades.",
+      "trades_count": 0
+    }
+  },
+  {
+    "timestamp": "2026-01-24T21:03:07.702862",
+    "type": "analyze",
+    "description": "Ran brief analysis",
+    "details": {
+      "mode": "brief",
+      "analysis_text": "Not enough trade data yet for analysis. Need at least 5 trades.",
+      "trades_count": 0
+    }
+  },
+  {
+    "timestamp": "2026-01-24T21:03:09.236852",
+    "type": "pickroast",
+    "description": "Roasted BwXhAQYw...",
+    "details": {
+      "wallet": "BwXhAQYwqeToTvjteqTnJwLgkgn1rPoNgyQAKJ5HxRY5",
+      "roast_text": "sold 12k tokens for 49 cents. FORTY NINE CENTS. that's not even a pack of gum bro what are we doing here",
+      "volume_usd": 0.48835040000057006
+    }
+  },
+  {
+    "timestamp": "2026-01-24T21:03:35.390578",
+    "type": "analyze",
+    "description": "Ran brief analysis",
+    "details": {
+      "mode": "brief",
+      "analysis_text": "Not enough trade data yet for analysis. Need at least 5 trades.",
+      "trades_count": 0
+    }
+  }
+]

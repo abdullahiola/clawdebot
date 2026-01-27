@@ -1,0 +1,42 @@
+[
+  {
+    "timestamp": "2026-01-27T20:09:27.480339",
+    "type": "analyze",
+    "description": "Ran brief analysis",
+    "details": {
+      "mode": "brief",
+      "analysis_text": "Equal trade count but sellers brought 3x the money to the slaughter. You managed a perfect 1:1 ratio while bleeding 16% - that's impressively tragic. \n\nThe math is simple: weak hands with weak wallets buying, strong hands with fat stacks dumping. Congrats on achieving perfect mediocrity while getting absolutely rekt.",
+      "trades_count": 100
+    }
+  },
+  {
+    "timestamp": "2026-01-27T20:10:09.593295",
+    "type": "pickroast",
+    "description": "Roasted nonofjCp...",
+    "details": {
+      "wallet": "nonofjCpDeEbRWnA82HENffi74FEGo4XTn41v2XWiJh",
+      "roast_text": "sold 2.6M tokens for $397 and the price immediately dumped harder. even the market said \"nah you right\" \ud83d\udc80",
+      "volume_usd": 397.465921700001
+    }
+  },
+  {
+    "timestamp": "2026-01-27T20:12:01.589153",
+    "type": "analyze",
+    "description": "Ran brief analysis",
+    "details": {
+      "mode": "brief",
+      "analysis_text": "More buyers than sellers and you're still bleeding red. Impressive feat of market incompetence. $39 net positive flow and -2.6% momentum proves you can't even pump properly. Peak retail energy right here.",
+      "trades_count": 100
+    }
+  },
+  {
+    "timestamp": "2026-01-27T20:13:11.728067",
+    "type": "pickroast",
+    "description": "Roasted HvFfBkKn...",
+    "details": {
+      "wallet": "HvFfBkKnpjQffzGeHZY8MEvEQPhxdHthAR4fgKE6gdSM",
+      "roast_text": "actually timed the top perfectly. sold 1.8M tokens for $289. professional exit liquidity. we salute your sacrifice.",
+      "volume_usd": 289.46542470000054
+    }
+  }
+]

@@ -1,0 +1,20 @@
+{
+  "token_address": "FTfaMwgskDxezC89rTqEEG8kgcAky4ejV2JciZhdpump",
+  "trades": [],
+  "total_buys": 1,
+  "total_sells": 0,
+  "total_buy_volume": 9.869627799999847,
+  "total_sell_volume": 0.0,
+  "creator_rewards": 0.004934813899999924,
+  "last_price": 1.6712452283730488e-07,
+  "highest_price": 1.6712452283730488e-07,
+  "lowest_price": 1.6712452283730488e-07,
+  "last_market_cap": 167.37792301193326,
+  "last_holder_count": null,
+  "last_creator_rewards_available": 0,
+  "total_analyses": 0,
+  "total_alerts": 1,
+  "start_time": 1769331078.483603,
+  "last_analysis_time": 0,
+  "analysis_mode": "brief"
+}

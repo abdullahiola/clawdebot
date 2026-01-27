@@ -1,0 +1,9 @@
+version: "2"
+authtoken: 38qusGrBr5ouc0VGsmFK3XblCET_4gwwbKyPkD1CAsYVoSwMA
+tunnels:
+  websocket:
+    proto: http
+    addr: 8765
+    schemes:
+      - https
+    inspect: true
