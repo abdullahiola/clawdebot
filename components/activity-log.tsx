@@ -9,7 +9,7 @@ interface ActivityLogProps {
 }
 
 export function ActivityLog({ trades = [], isLive = false }: ActivityLogProps) {
-  const [activeTab, setActiveTab] = useState<'activity' | 'pinned'>('activity')
+  const [activeTab, setActiveTab] = useState<'activity' | 'analysis'>('activity')
 
   const formatTimestamp = (ts: number) => {
     try {
@@ -56,14 +56,14 @@ export function ActivityLog({ trades = [], isLive = false }: ActivityLogProps) {
           )}
         </button>
         <button
-          onClick={() => setActiveTab('pinned')}
-          className={`flex items-center gap-2 transition-colors ${activeTab === 'pinned'
+          onClick={() => setActiveTab('analysis')}
+          className={`flex items-center gap-2 transition-colors ${activeTab === 'analysis'
             ? 'text-foreground'
             : 'text-muted-foreground/50 hover:text-muted-foreground'
             }`}
         >
           <span className="text-muted-foreground/50">~</span>
-          <span>pinned</span>
+          <span>analysis</span>
         </button>
       </div>
 
@@ -104,12 +104,26 @@ export function ActivityLog({ trades = [], isLive = false }: ActivityLogProps) {
         </div>
       ) : (
         <div className="h-64 overflow-y-auto font-mono text-xs">
-          <div className="text-muted-foreground/70 py-4 space-y-3">
-            <p className="text-foreground/80">📌 Pinned Messages</p>
-            <p>This section is reserved for important announcements and pinned content.</p>
-            <p className="text-muted-foreground/50 text-[10px]">
-              // TODO: Add your pinned content here
-            </p>
+          <div className="text-muted-foreground/70 py-4 space-y-4 px-2">
+            <div className="space-y-2">
+              <p className="text-foreground/90 font-medium">📊 Market Analysis</p>
+              <p className="text-xs leading-relaxed">
+                AI-powered market analysis will appear here. This section will display:
+              </p>
+            </div>
+
+            <div className="space-y-1 text-[11px] text-muted-foreground/60 ml-2">
+              <p>• Real-time sentiment analysis</p>
+              <p>• Price action predictions</p>
+              <p>• Volume trend insights</p>
+              <p>• Holder behavior patterns</p>
+            </div>
+
+            <div className="pt-2 border-t border-border/20">
+              <p className="text-[10px] text-muted-foreground/50 italic">
+                Coming soon: Live Claude analysis of trading patterns
+              </p>
+            </div>
           </div>
         </div>
       )}

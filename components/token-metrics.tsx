@@ -1,29 +1,38 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useDexScreener } from "@/hooks/useDexScreener"
 
 interface TokenMetricsProps {
+  // WebSocket data props (for backward compatibility)
   marketCap?: number | null
   holders?: number | null
-  totalBuys?: number
-  totalSells?: number
-  totalBuyVolume?: number
-  totalSellVolume?: number
   creatorRewards?: number
   isLive?: boolean
+
+  // Direct DexScreener fetch props
+  tokenAddress?: string
+  enableDirectFetch?: boolean
+  refreshInterval?: number
 }
 
 export function TokenMetrics({
   marketCap,
   holders,
-  totalBuys = 0,
-  totalSells = 0,
-  totalBuyVolume = 0,
-  totalSellVolume = 0,
   creatorRewards = 0,
-  isLive = false
+  isLive = false,
+  tokenAddress,
+  enableDirectFetch = false,
+  refreshInterval = 30000
 }: TokenMetricsProps) {
   const [blinkVisible, setBlinkVisible] = useState(true)
+
+  // Direct DexScreener fetch (if enabled)
+  const { metrics, loading, error } = useDexScreener({
+    mint: enableDirectFetch ? tokenAddress : undefined,
+    autoFetch: enableDirectFetch,
+    refreshInterval: enableDirectFetch ? refreshInterval : 0
+  })
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -32,19 +41,29 @@ export function TokenMetrics({
     return () => clearInterval(interval)
   }, [])
 
+  // Use DexScreener metrics for market data, WebSocket for holders and creator rewards
+  const displayMarketCap = enableDirectFetch ? metrics?.marketCapUsd : marketCap
+  const displayLiquidity = enableDirectFetch ? metrics?.liquidityUsd : undefined
+  const displayVolume24h = enableDirectFetch ? metrics?.volume24h : undefined
+  // Always use WebSocket data for holders and creator rewards (claimed, not available)
+  const displayHolders = holders
+  const displayCreatorRewards = creatorRewards
+  const dataSource = enableDirectFetch ? (loading ? "⟳" : "DexScreener") : "WebSocket"
+
   const formatMarketCap = (mc: number | null | undefined) => {
     if (!mc) return "—"
-    if (mc >= 1000) return `${(mc / 1000).toFixed(2)}K SOL`
-    return `${mc.toFixed(2)} SOL`
+    if (mc >= 1000000) return `$${(mc / 1000000).toFixed(2)}M`
+    if (mc >= 1000) return `$${(mc / 1000).toFixed(1)}K`
+    return `$${mc.toFixed(0)}`
   }
 
-  const formatVolume = (vol: number) => {
+  const formatVolume = (vol: number | undefined | null) => {
+    if (!vol) return "—"
     if (vol >= 1000000) return `$${(vol / 1000000).toFixed(2)}M`
     if (vol >= 1000) return `$${(vol / 1000).toFixed(1)}K`
     return `$${vol.toFixed(0)}`
   }
 
-  const netFlow = totalBuyVolume - totalSellVolume
 
   return (
     <div className="space-y-4">
@@ -57,35 +76,46 @@ export function TokenMetrics({
             LIVE
           </span>
         )}
+        {enableDirectFetch && (
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 text-[10px]">
+            {dataSource}
+          </span>
+        )}
+        {error && (
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-500/10 text-red-500 text-[10px]">
+            API Error
+          </span>
+        )}
         <span className={`${blinkVisible ? "opacity-100" : "opacity-0"} text-foreground/60 text-xs`}>|</span>
       </div>
 
       <div className="space-y-3">
         <div className="flex justify-between items-center py-2 border-b border-border/20">
           <span className="text-muted-foreground/60 text-xs uppercase tracking-wider">Market Cap</span>
-          <span className="text-foreground text-lg tabular-nums">{formatMarketCap(marketCap)}</span>
+          <span className="text-foreground text-lg tabular-nums">{formatMarketCap(displayMarketCap)}</span>
         </div>
+
+        {enableDirectFetch && displayLiquidity !== undefined && (
+          <div className="flex justify-between items-center py-2 border-b border-border/20">
+            <span className="text-muted-foreground/60 text-xs uppercase tracking-wider">Liquidity</span>
+            <span className="text-foreground text-lg tabular-nums">{formatVolume(displayLiquidity)}</span>
+          </div>
+        )}
+
+        {enableDirectFetch && displayVolume24h !== undefined && (
+          <div className="flex justify-between items-center py-2 border-b border-border/20">
+            <span className="text-muted-foreground/60 text-xs uppercase tracking-wider">24h Volume</span>
+            <span className="text-foreground text-lg tabular-nums">{formatVolume(displayVolume24h)}</span>
+          </div>
+        )}
+
         <div className="flex justify-between items-center py-2 border-b border-border/20">
           <span className="text-muted-foreground/60 text-xs uppercase tracking-wider">Holders</span>
-          <span className="text-foreground text-lg tabular-nums">{holders?.toLocaleString() ?? "—"}</span>
-        </div>
-        <div className="flex justify-between items-center py-2 border-b border-border/20">
-          <span className="text-muted-foreground/60 text-xs uppercase tracking-wider">Creator Rewards</span>
-          <span className="text-[#f5a623] text-lg tabular-nums">{formatVolume(creatorRewards)}</span>
-        </div>
-        <div className="flex justify-between items-center py-2 border-b border-border/20">
-          <span className="text-muted-foreground/60 text-xs uppercase tracking-wider">Buys / Sells</span>
-          <span className="text-foreground text-lg tabular-nums">
-            <span className="text-[#28c840]">{totalBuys}</span>
-            <span className="text-muted-foreground/40"> / </span>
-            <span className="text-[#ff5f56]">{totalSells}</span>
-          </span>
+          <span className="text-foreground text-lg tabular-nums">{displayHolders?.toLocaleString() ?? "—"}</span>
         </div>
         <div className="flex justify-between items-center py-2">
-          <span className="text-muted-foreground/60 text-xs uppercase tracking-wider">Net Flow</span>
-          <span className={`text-lg tabular-nums ${netFlow >= 0 ? 'text-[#28c840]' : 'text-[#ff5f56]'}`}>
-            {netFlow >= 0 ? '+' : ''}{formatVolume(netFlow)}
-          </span>
+          <span className="text-muted-foreground/60 text-xs uppercase tracking-wider">Creator Rewards</span>
+          <span className="text-[#f5a623] text-lg tabular-nums">{formatVolume(displayCreatorRewards)}</span>
         </div>
       </div>
     </div>

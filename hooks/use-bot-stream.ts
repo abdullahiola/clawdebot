@@ -12,6 +12,7 @@ export interface BotState {
     highestPrice: number | null
     lowestPrice: number | null
     lastMarketCap: number | null
+    lastMarketCapUsd: number | null
     lastHolderCount: number | null
     lastCreatorRewardsAvailable: number
     creatorRewards: number
@@ -142,6 +143,7 @@ export function useBotStream() {
 
                         case 'state_update': {
                             const update = message.data as Partial<BotState>
+                            console.log('📊 State update received:', update)
                             setState(prev => prev ? { ...prev, ...update } : null)
                             break
                         }

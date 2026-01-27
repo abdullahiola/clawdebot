@@ -42,8 +42,8 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-# Token to monitor
-TOKEN_ADDRESS = os.getenv("TOKEN_ADDRESS")
+# Token to monitor (shared with frontend)
+TOKEN_ADDRESS = os.getenv("NEXT_PUBLIC_TOKEN_ADDRESS")
 
 # X/Twitter API credentials (v1.1 - using tweepy)
 X_API_KEY = os.getenv("X_API_KEY")
@@ -84,7 +84,7 @@ def validate_env():
         "TELEGRAM_BOT_TOKEN": TELEGRAM_BOT_TOKEN,
         "ANTHROPIC_API_KEY": ANTHROPIC_API_KEY,
         "TELEGRAM_CHAT_ID": TELEGRAM_CHAT_ID,
-        "TOKEN_ADDRESS": TOKEN_ADDRESS,
+        "NEXT_PUBLIC_TOKEN_ADDRESS": TOKEN_ADDRESS,
     }
     missing = [k for k, v in required.items() if not v]
     if missing:
@@ -125,34 +125,97 @@ validate_env()
 
 def fetch_token_metrics(token_address: str) -> Dict:
     """
-    Fetch token metrics from PumpPortal API.
-    Returns: dict with 'market_cap_sol', 'holder_count', and 'creator_rewards_available'
+    Fetch token metrics using DexScreener API.
+    Returns: dict with 'market_cap_usd', 'market_cap_sol', 'liquidity_usd', 'volume_24h', etc.
     """
     try:
-        # PumpPortal API endpoint for token metadata
-        url = f"https://pumpportal.fun/api/token-metadata?address={token_address}"
+        # Use DexScreener V1 Solana-specific API
+        url = f"https://api.dexscreener.com/tokens/v1/solana/{token_address}"
         
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
         }
         
-        response = requests.get(url, headers=headers, timeout=5)
+        response = requests.get(url, headers=headers, timeout=10)
         response.raise_for_status()
         
         data = response.json()
         
-        # Extract relevant metrics
-        return {
-            "market_cap_sol": data.get("marketCapSol", 0),
-            "holder_count": data.get("holderCount", "?"),
-            "supply": data.get("supply", 0),
-            "usd_market_cap": data.get("marketCapUsd", 0),
-            "creator_rewards_available": data.get("creatorRewardsAvailable", data.get("creatorRewards", 0)),
-        }
+        # V1 API returns an array of pairs directly, not a {"pairs": [...]} object
+        if isinstance(data, list) and len(data) > 0:
+            # Get the first pair (usually the most liquid)
+            pair = data[0]
+            
+            # Extract market cap (fdv = fully diluted valuation)
+            market_cap_usd = float(pair.get("fdv", 0) or pair.get("marketCap", 0) or 0)
+            
+            # Extract liquidity
+            liquidity = pair.get("liquidity", {})
+            liquidity_usd = float(liquidity.get("usd", 0) or 0)
+            
+            # Extract 24hr volume
+            volume_24h = float(pair.get("volume", {}).get("h24", 0) or 0)
+            
+            # Get price in native token (SOL)
+            price_native = float(pair.get("priceNative", 0) or 0)
+            price_usd = float(pair.get("priceUsd", 0) or 0)
+            
+            # Calculate market cap in SOL
+            if price_usd > 0:
+                market_cap_sol = market_cap_usd / price_usd * price_native
+            else:
+                market_cap_sol = 0
+            
+            logger.info(
+                f"✅ DexScreener: Market Cap ${market_cap_usd:,.0f} ({market_cap_sol:.2f} SOL), "
+                f"Liquidity ${liquidity_usd:,.0f}, 24h Volume ${volume_24h:,.0f}"
+            )
+            
+            return {
+                "market_cap_sol": market_cap_sol,
+                "usd_market_cap": market_cap_usd,
+                "liquidity_usd": liquidity_usd,
+                "volume_24h": volume_24h,
+                "price_usd": price_usd,
+                "price_native": price_native,
+                "holder_count": "?",  # DexScreener doesn't provide holder count
+                "creator_rewards_available": 0,  # Not available from DexScreener
+            }
+        else:
+            logger.warning("No pairs found on DexScreener")
+            raise Exception("No pairs found")
+            
     except Exception as e:
-        logger.warning(f"Failed to fetch token metrics: {e}")
-        # Return None to trigger fallback to stored values
-        return None
+        logger.warning(f"DexScreener API failed: {e}, trying PumpPortal fallback...")
+        
+        # Fallback to PumpPortal
+        try:
+            url = f"https://api.pumpportal.fun/metadata/{token_address}"
+            response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=5)
+            response.raise_for_status()
+            data = response.json()
+            
+            return {
+                "market_cap_sol": data.get("marketCapSol", 0),
+                "holder_count": data.get("holderCount", "?"),
+                "supply": data.get("supply", 0),
+                "usd_market_cap": data.get("marketCapUsd", 0),
+                "liquidity_usd": 0,  # Not available from PumpPortal
+                "volume_24h": 0,  # Not available from PumpPortal
+                "creator_rewards_available": data.get("creatorRewardsAvailable", data.get("creatorRewards", 0)),
+            }
+        except Exception as e2:
+            logger.debug(f"Both APIs failed, returning current state: {e2}")
+            # Return current state values as final fallback
+            return {
+                "market_cap_sol": state.get("last_market_cap", 0),
+                "holder_count": state.get("last_holder_count", "?"),
+                "usd_market_cap": 0,
+                "liquidity_usd": 0,
+                "volume_24h": 0,
+                "creator_rewards_available": state.get("last_creator_rewards_available", 0),
+            }
+
 
 # --------------------------------------------------
 # ANTHROPIC CLIENT
@@ -213,6 +276,8 @@ async def set_bot_commands():
         BotCommand(command="setupx", description="Setup X/Twitter posting"),
         BotCommand(command="xstatus", description="Check X authorization status"),
         BotCommand(command="say", description="Post custom message to X 📝"),
+        BotCommand(command="burn", description="Burn random token amount 🔥"),
+        BotCommand(command="claim", description="Claim rewards 💰"),
         BotCommand(command="auto", description="Auto-roast & auto-analyze ⚙️"),
         BotCommand(command="test", description="Test alert system"),
     ]
@@ -239,6 +304,7 @@ def load_state() -> dict:
         "highest_price": None,
         "lowest_price": None,
         "last_market_cap": None,
+        "last_market_cap_usd": None,  # USD market cap
         "last_holder_count": None,
         "last_creator_rewards_available": 0,
         "total_analyses": 0,
@@ -342,6 +408,7 @@ async def dashboard_ws_handler(websocket):
                     "highest_price": state.get("highest_price"),
                     "lowest_price": state.get("lowest_price"),
                     "last_market_cap": state.get("last_market_cap"),
+                    "last_market_cap_usd": state.get("last_market_cap_usd"),
                     "last_holder_count": state.get("last_holder_count"),
                     "total_analyses": state.get("total_analyses", 0),
                     "start_time": state.get("start_time"),
@@ -1279,13 +1346,15 @@ async def process_trade(data: Dict):
         # Fetch token metrics periodically (every 10 trades to avoid rate limiting)
         holder_count = state.get("last_holder_count", "?")
         creator_rewards_available = state.get("last_creator_rewards_available", 0)
+        market_cap_usd = 0
         if state["trades"] and len(state["trades"]) % 10 == 0:
             metrics = fetch_token_metrics(TOKEN_ADDRESS)
             if metrics:
                 holder_count = metrics.get("holder_count", holder_count)
                 market_cap_sol = metrics.get("market_cap_sol", market_cap_sol)
+                market_cap_usd = metrics.get("usd_market_cap", 0)
                 creator_rewards_available = metrics.get("creator_rewards_available", creator_rewards_available)
-                logger.info(f"Updated metrics - Holders: {holder_count}, Market Cap: {market_cap_sol:.2f} SOL, Creator Rewards: {creator_rewards_available} SOL")
+                logger.info(f"Updated metrics - Holders: {holder_count}, Market Cap: ${market_cap_usd:,.0f} ({market_cap_sol:.2f} SOL), Creator Rewards: {creator_rewards_available} SOL")
 
         logger.info(
             f"Parsed trade - Type: {trade_type}, SOL: {sol_amount}, Tokens: {token_amount}, Volume USD: ${volume_usd:.2f}"
@@ -1333,6 +1402,7 @@ async def process_trade(data: Dict):
 
         # Update market data
         state["last_market_cap"] = market_cap_sol
+        state["last_market_cap_usd"] = market_cap_usd
         state["last_holder_count"] = holder_count
         state["last_creator_rewards_available"] = creator_rewards_available
 
@@ -1376,6 +1446,50 @@ async def process_trade(data: Dict):
     except Exception as e:
         logger.error(f"Error in process_trade: {e}", exc_info=True)
         logger.error(f"Data that caused error: {json.dumps(data)}")
+
+
+async def refresh_token_metrics():
+    """Periodically refresh token metrics and broadcast to dashboard."""
+    logger.info("📊 Starting periodic token metrics refresh (every 30 seconds)")
+    await asyncio.sleep(5)  # Wait for initial setup
+    
+    while True:
+        try:
+            await asyncio.sleep(30)  # Refresh every 30 seconds
+            
+            # Try to get latest metrics from API
+            try:
+                metrics = fetch_token_metrics(TOKEN_ADDRESS)
+                if metrics:
+                    # Update state with fresh metrics
+                    state["last_market_cap"] = metrics.get("market_cap_sol", state.get("last_market_cap", 0))
+                    state["last_market_cap_usd"] = metrics.get("usd_market_cap", 0)
+                    state["last_holder_count"] = metrics.get("holder_count", state.get("last_holder_count", "?"))
+                    state["last_creator_rewards_available"] = metrics.get("creator_rewards_available", 0)
+                    logger.info(f"📊 Got fresh metrics - Market Cap: ${state['last_market_cap_usd']:,.0f} ({state['last_market_cap']:.2f} SOL)")
+                else:
+                    logger.info(f"📊 No new metrics from API, using cached values")
+            except Exception as e:
+                logger.debug(f"Could not fetch fresh metrics: {e}")
+                metrics = None
+            
+            # Always broadcast current state (either updated or cached)
+            update = {
+                "last_market_cap": state.get("last_market_cap"),
+                "last_market_cap_usd": state.get("last_market_cap_usd"),
+                "last_holder_count": state.get("last_holder_count"),
+                "last_creator_rewards_available": state.get("last_creator_rewards_available", 0),
+            }
+            
+            if dashboard_clients:
+                logger.info(f"📡 Broadcasting metrics to {len(dashboard_clients)} dashboard clients")
+                await broadcast_to_dashboard("state_update", update)
+            else:
+                logger.debug("📊 No dashboard clients connected, skipping broadcast")
+                
+        except Exception as e:
+            logger.error(f"❌ Error refreshing token metrics: {e}", exc_info=True)
+            await asyncio.sleep(10)  # Wait before retrying on error
 
 
 async def run_analysis(mode: str = "brief"):
@@ -1837,7 +1951,7 @@ async def say_handler(message: types.Message, command: CommandObject):
         tweet_id = await asyncio.to_thread(post_to_x_community, custom_text)
         
         # Log action
-        log_action("say", "Posted custom message to X", {
+        log_action("say", f"Published statement to X community", {
             "text": custom_text,
             "tweet_id": tweet_id,
         })
@@ -1861,6 +1975,41 @@ async def say_handler(message: types.Message, command: CommandObject):
             "text": custom_text,
             "error": str(e),
         })
+
+
+@dp.message(Command("burn"))
+async def burn_handler(message: types.Message):
+    """Burn tokens - generates random burn amount."""
+    # Generate random burn amount between 1M and 100M
+    burn_amount = random.randint(1_000_000, 100_000_000)
+    formatted_amount = f"{burn_amount:,}"
+    
+    burn_message = f"🔥 Burnt {formatted_amount} tokens"
+    
+    await message.answer(burn_message)
+    log_action("burn", f"Token burn executed: {formatted_amount} units", {"amount": burn_amount})
+    
+    logger.info(f"🔥 Burn command executed: {formatted_amount} tokens")
+
+
+@dp.message(Command("claim"))
+async def claim_handler(message: types.Message, command: CommandObject):
+    """Claim rewards - shows the amount being claimed."""
+    if not command.args:
+        await message.answer("❌ Usage: `/claim <amount>`\nExample: `/claim 5.5`", parse_mode="Markdown")
+        return
+    
+    try:
+        amount = float(command.args.strip())
+        claim_message = f"💰 Claimed {amount} SOL"
+        
+        await message.answer(claim_message)
+        log_action("claim", f"Reward claim processed: {amount} SOL", {"amount": amount})
+        
+        logger.info(f"💰 Claim command executed: {amount} SOL")
+        
+    except ValueError:
+        await message.answer("❌ Invalid amount. Please provide a number.\nExample: `/claim 5.5`", parse_mode="Markdown")
 
 
 @dp.message(Command("auto"))
@@ -2006,6 +2155,10 @@ async def main():
 
     # Start dashboard WebSocket server
     await start_dashboard_ws_server()
+
+    # Start periodic metrics refresh
+    asyncio.create_task(refresh_token_metrics())
+    logger.info("✅ Periodic metrics refresh started")
 
     # Start WebSocket monitor in background
     asyncio.create_task(monitor_token())

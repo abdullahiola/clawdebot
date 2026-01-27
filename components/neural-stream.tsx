@@ -35,6 +35,10 @@ export function NeuralStream({ actions = [], isLive = false }: NeuralStreamProps
         return "text-[#28c840]"
       case "say":
         return "text-[#0a84ff]"
+      case "burn":
+        return "text-[#ff9f0a]"
+      case "claim":
+        return "text-[#f5a623]"
       case "auto_start":
       case "auto_stop":
         return "text-[#ff9f0a]"
@@ -61,13 +65,15 @@ export function NeuralStream({ actions = [], isLive = false }: NeuralStreamProps
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-3 text-xs">
-        <span className="text-muted-foreground/50">~</span>
-        <span className="text-foreground/90">neural_stream --tail -f</span>
-        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border/30 text-foreground/70 text-[10px] tracking-wide ${isLive ? '' : 'opacity-50'}`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-[#28c840] animate-pulse' : 'bg-muted-foreground/40'}`} />
-          {isLive ? 'LIVE' : 'OFFLINE'}
-        </span>
+      <div className="flex items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-3">
+          <span className="text-muted-foreground/50">~</span>
+          <span className="text-foreground/90">neural_stream --tail -f</span>
+          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border/30 text-foreground/70 text-[10px] tracking-wide ${isLive ? '' : 'opacity-50'}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-[#28c840] animate-pulse' : 'bg-muted-foreground/40'}`} />
+            {isLive ? 'LIVE' : 'OFFLINE'}
+          </span>
+        </div>
       </div>
 
       <div
@@ -84,10 +90,13 @@ export function NeuralStream({ actions = [], isLive = false }: NeuralStreamProps
                 {action.description}
               </span>
             </div>
-            {action.details && Object.keys(action.details).length > 0 && action.type?.includes('roast') && (
+            {action.details && Object.keys(action.details).length > 0 && (
               <div className="mt-1 ml-16 text-xs text-muted-foreground/60 italic">
-                {(action.details as { roast_text?: string }).roast_text?.slice(0, 100)}
-                {((action.details as { roast_text?: string }).roast_text?.length ?? 0) > 100 ? '...' : ''}
+                {(action.details as { roast_text?: string; analysis_text?: string; amount?: number }).roast_text?.slice(0, 100) ||
+                  (action.details as { roast_text?: string; analysis_text?: string; amount?: number }).analysis_text?.slice(0, 100) ||
+                  `Amount: ${(action.details as { amount?: number }).amount || 'N/A'}`}
+                {(((action.details as { roast_text?: string }).roast_text?.length ?? 0) > 100 ||
+                  ((action.details as { analysis_text?: string }).analysis_text?.length ?? 0) > 100) ? '...' : ''}
               </div>
             )}
           </div>

@@ -26,31 +26,28 @@ export function StatusBar() {
   }
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-3 bg-card/50 backdrop-blur-sm border border-border/40 rounded-xl text-xs font-mono">
-      <div className="flex items-center gap-6">
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground/60">Status</span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#28c840] shadow-sm shadow-[#28c840]/50" />
-            <span className="text-foreground/90">Online</span>
-          </span>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Status */}
+      <div className="bg-gradient-to-br from-[#28c840]/10 to-transparent border border-[#28c840]/30 rounded-lg p-4 backdrop-blur-sm">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="w-2 h-2 rounded-full bg-[#28c840] shadow-lg shadow-[#28c840]/50 animate-pulse" />
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-medium">Status</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground/60">Network</span>
-          <span className="text-foreground/90">Solana</span>
+        <div className="text-lg font-mono font-semibold text-[#28c840]">Online</div>
+      </div>
+
+      {/* Network */}
+      <div className="bg-card/60 backdrop-blur-sm border border-border/40 rounded-lg p-4 hover:border-border/60 transition-all">
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-medium mb-1">Network</div>
+        <div className="text-lg font-mono font-semibold text-foreground/90 flex items-center gap-2">
+          <span className="text-sm">⬡</span> Solana
         </div>
       </div>
-      
-      <div className="flex items-center gap-6">
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground/60">Session</span>
-          <span className="text-foreground/90 tabular-nums">{formatSession(session)}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground/60">Time</span>
-          <span className="text-foreground/90 tabular-nums">{time}</span>
-        </div>
-        <span className="text-muted-foreground/40">v0.5.0</span>
+
+      {/* Session Time */}
+      <div className="bg-card/60 backdrop-blur-sm border border-border/40 rounded-lg p-4 hover:border-border/60 transition-all">
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-medium mb-1">Session</div>
+        <div className="text-lg font-mono font-semibold text-foreground/90 tabular-nums">{formatSession(session)}</div>
       </div>
     </div>
   )

@@ -3,6 +3,7 @@
 import { TerminalWindow } from "@/components/terminal-window"
 import { TokenMetrics } from "@/components/token-metrics"
 import { NeuralStream } from "@/components/neural-stream"
+import { AnalysisStream } from "@/components/analysis-stream"
 import { ActivityLog } from "@/components/activity-log"
 import { StatusBar } from "@/components/status-bar"
 import { useBotStream } from "@/hooks/use-bot-stream"
@@ -16,7 +17,7 @@ export default function Home() {
         {/* Header */}
         <div className="text-center space-y-3 pt-4">
           <h1 className="text-3xl md:text-4xl font-mono text-foreground tracking-tight">
-            ClaudeBot
+            ClawdeBot
           </h1>
           <p className="text-sm text-muted-foreground font-mono tracking-wide">
             Neural Network Token Dashboard
@@ -31,14 +32,13 @@ export default function Home() {
           {/* Token Metrics */}
           <TerminalWindow title="claudebot@solana: ~/metrics">
             <TokenMetrics
-              marketCap={state?.lastMarketCap}
+              marketCap={state?.lastMarketCapUsd}
               holders={state?.lastHolderCount}
-              totalBuys={state?.totalBuys ?? 0}
-              totalSells={state?.totalSells ?? 0}
-              totalBuyVolume={state?.totalBuyVolume ?? 0}
-              totalSellVolume={state?.totalSellVolume ?? 0}
               creatorRewards={state?.creatorRewards ?? 0}
               isLive={isConnected}
+              tokenAddress={process.env.NEXT_PUBLIC_TOKEN_ADDRESS}
+              enableDirectFetch={true}
+              refreshInterval={30000}
             />
           </TerminalWindow>
 
@@ -51,29 +51,21 @@ export default function Home() {
           </TerminalWindow>
         </div>
 
-        {/* Activity Log - Full Width */}
-        <TerminalWindow title="claudebot@solana: ~/logs">
-          <ActivityLog
-            trades={trades}
-            isLive={isConnected}
-          />
-        </TerminalWindow>
+        {/* Activity Log - Split into Two Columns */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <TerminalWindow title="claudebot@solana: ~/activity">
+            <ActivityLog
+              trades={trades}
+              isLive={isConnected}
+            />
+          </TerminalWindow>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <QuickStat
-            label="Net Flow"
-            value={formatNetFlow((state?.totalBuyVolume ?? 0) - (state?.totalSellVolume ?? 0))}
-            positive={(state?.totalBuyVolume ?? 0) >= (state?.totalSellVolume ?? 0)}
-          />
-          <QuickStat
-            label="Total Trades"
-            value={((state?.totalBuys ?? 0) + (state?.totalSells ?? 0)).toLocaleString()}
-          />
-          <QuickStat
-            label="Status"
-            value={isConnected ? "🟢 Live" : "⚫ Offline"}
-          />
+          <TerminalWindow title="claudebot@solana: ~/analysis">
+            <AnalysisStream
+              actions={actions}
+              isLive={isConnected}
+            />
+          </TerminalWindow>
         </div>
 
         {/* Footer */}
@@ -87,12 +79,7 @@ export default function Home() {
   )
 }
 
-function formatNetFlow(value: number): string {
-  const sign = value >= 0 ? '+' : ''
-  if (Math.abs(value) >= 1000000) return `${sign}$${(value / 1000000).toFixed(2)}M`
-  if (Math.abs(value) >= 1000) return `${sign}$${(value / 1000).toFixed(1)}K`
-  return `${sign}$${value.toFixed(0)}`
-}
+
 
 function QuickStat({ label, value, positive }: { label: string; value: string; positive?: boolean }) {
   return (
