@@ -173,5 +173,82 @@
       "tweet_id": "2016270009861853332",
       "volume_usd": 5.205265600000075
     }
+  },
+  {
+    "timestamp": "2026-01-27T23:01:08.700955",
+    "type": "auto_roast",
+    "description": "Posted roast for 3p9aBiex...",
+    "details": {
+      "wallet": "3p9aBiexEDtmoMsjC9BwrGqisLAHmpdKfN1mnDfq9kME",
+      "roast_text": "sold 130k tokens for the price of a gas station sandwich. that's not trading, that's donating to the void.",
+      "tweet_id": "2016270275147354465",
+      "volume_usd": 16.523892799997952
+    }
+  },
+  {
+    "timestamp": "2026-01-27T23:02:12.238184",
+    "type": "auto_roast",
+    "description": "Posted roast for DWfDzeYv...",
+    "details": {
+      "wallet": "DWfDzeYvsvJzHYetYdro7oVDkm3mFpPS2pgGezez1pMC",
+      "roast_text": "sold 1.3M tokens for $145 and watched it pump 6% immediately. the blockchain is laughing at you forever.",
+      "tweet_id": "2016270541712146470",
+      "volume_usd": 145.24669200000062
+    }
+  },
+  {
+    "timestamp": "2026-01-27T23:03:15.287928",
+    "type": "auto_roast",
+    "description": "Posted roast for 76Ldkpv1...",
+    "details": {
+      "wallet": "76Ldkpv1KSGJop9quGqRcUQEZuZVunJaWQ49Heh4Dpn4",
+      "roast_text": "sold 40k tokens for five dollars and twenty one cents. couldn't even buy a footlong. generational poverty mindset.",
+      "tweet_id": "2016270806175629522",
+      "volume_usd": 5.205265600000075
+    }
+  },
+  {
+    "timestamp": "2026-01-27T23:04:19.360123",
+    "type": "auto_roast",
+    "description": "Posted roast for F7Ey5Qc7...",
+    "details": {
+      "wallet": "F7Ey5Qc7wURqME1LeGj3PSddszufFeMcbJEZqb7H11Pp",
+      "roast_text": "sold 580k tokens for $54. FIFTY FOUR DOLLARS. couldn't even afford dinner and chose violence against their own bag.",
+      "tweet_id": "2016271073101127817",
+      "volume_usd": 54.26244920000158
+    }
+  },
+  {
+    "timestamp": "2026-01-27T23:05:23.091010",
+    "type": "auto_roast",
+    "description": "Posted roast for 9tv5mfwa...",
+    "details": {
+      "wallet": "9tv5mfwaQVsJQ6xg9SLeaGS8kPLxHG7VQGAvtmQteFhn",
+      "roast_text": "sold 281k tokens for $29. TWENTY NINE DOLLARS. bro could've made more donating plasma. generational fumbling.",
+      "tweet_id": "2016271342190895331",
+      "volume_usd": 29.955396700000847
+    }
+  },
+  {
+    "timestamp": "2026-01-27T23:06:25.779113",
+    "type": "auto_roast",
+    "description": "Posted roast for AmrefYSH...",
+    "details": {
+      "wallet": "AmrefYSHw31CdBdWA1zyvtEw6igU8sWuSGg6gyTWxpZY",
+      "roast_text": "sold 78k tokens for $7.40. that's not even a decent sandwich. blockchain documenting this poverty mindset forever.",
+      "tweet_id": "2016271605110825280",
+      "volume_usd": 7.399445500001889
+    }
+  },
+  {
+    "timestamp": "2026-01-27T23:07:29.462808",
+    "type": "auto_roast",
+    "description": "Posted roast for 6EAaPqnw...",
+    "details": {
+      "wallet": "6EAaPqnwT54YnYfCRyupN8rK25i2hbguBFcbfVQ8hGWj",
+      "roast_text": "sold 2 million tokens for $170. that's not trading, that's donating to the void with extra steps.",
+      "tweet_id": "2016271872199909502",
+      "volume_usd": 170.33478939999895
+    }
   }
 ]
