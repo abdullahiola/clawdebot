@@ -42,6 +42,9 @@ export function NeuralStream({ actions = [], isLive = false }: NeuralStreamProps
       case "auto_start":
       case "auto_stop":
         return "text-[#ff9f0a]"
+      case "mention_reply":
+      case "manual_reply":
+        return "text-[#bf5af2]"
       default:
         return "text-foreground"
     }
@@ -80,27 +83,30 @@ export function NeuralStream({ actions = [], isLive = false }: NeuralStreamProps
         ref={scrollRef}
         className="h-64 overflow-y-auto space-y-2 pr-2"
       >
-        {displayActions.slice(0, 15).map((action, index) => (
-          <div key={`${action.timestamp}-${index}`} className="group py-2 border-b border-border/10 last:border-0">
-            <div className="flex items-start gap-3 text-xs">
-              <span className="text-muted-foreground/40 shrink-0 tabular-nums">
-                {formatTimestamp(action.timestamp)}
-              </span>
-              <span className={`${getTypeColor(action.type)} leading-relaxed`}>
-                {action.description}
-              </span>
-            </div>
-            {action.details && Object.keys(action.details).length > 0 && (
-              <div className="mt-1 ml-16 text-xs text-muted-foreground/60 italic">
-                {(action.details as { roast_text?: string; analysis_text?: string; amount?: number }).roast_text?.slice(0, 100) ||
-                  (action.details as { roast_text?: string; analysis_text?: string; amount?: number }).analysis_text?.slice(0, 100) ||
-                  `Amount: ${(action.details as { amount?: number }).amount || 'N/A'}`}
-                {(((action.details as { roast_text?: string }).roast_text?.length ?? 0) > 100 ||
-                  ((action.details as { analysis_text?: string }).analysis_text?.length ?? 0) > 100) ? '...' : ''}
+        {[...displayActions].reverse().slice(0, 15).map((action, index) => {
+          const details = action.details as { roast_text?: string; analysis_text?: string; reply_text?: string; amount?: number }
+          const hasTextContent = details?.roast_text || details?.analysis_text || details?.reply_text
+          const textContent = details?.roast_text?.slice(0, 100) || details?.analysis_text?.slice(0, 100) || details?.reply_text?.slice(0, 100)
+          const isOverflow = (details?.roast_text?.length ?? 0) > 100 || (details?.analysis_text?.length ?? 0) > 100 || (details?.reply_text?.length ?? 0) > 100
+
+          return (
+            <div key={`${action.timestamp}-${index}`} className="group py-2 border-b border-border/10 last:border-0">
+              <div className="flex items-start gap-3 text-xs">
+                <span className="text-muted-foreground/40 shrink-0 tabular-nums">
+                  {formatTimestamp(action.timestamp)}
+                </span>
+                <span className={`${getTypeColor(action.type)} leading-relaxed`}>
+                  {action.description}
+                </span>
               </div>
-            )}
-          </div>
-        ))}
+              {action.details && Object.keys(action.details).length > 0 && hasTextContent && (
+                <div className="mt-1 ml-16 text-xs text-muted-foreground/60 italic">
+                  {textContent}{isOverflow ? '...' : ''}
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
     </div>
   )

@@ -12,7 +12,6 @@ from typing import Dict, List, Optional
 from dotenv import load_dotenv
 
 import anthropic
-import tweepy
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command, CommandObject
 from aiogram.enums import ChatAction
@@ -36,7 +35,9 @@ logger = logging.getLogger(__name__)
 # ENV SETUP
 # --------------------------------------------------
 
-load_dotenv()
+# Load environment from .env file in parent directory
+env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")
+load_dotenv(env_path)
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
@@ -45,12 +46,15 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 # Token to monitor (shared with frontend)
 TOKEN_ADDRESS = os.getenv("NEXT_PUBLIC_TOKEN_ADDRESS")
 
-# X/Twitter API credentials (v1.1 - using tweepy)
+# X/Twitter API credentials
 X_API_KEY = os.getenv("X_API_KEY")
 X_API_SECRET = os.getenv("X_API_SECRET")
 X_ACCESS_TOKEN = os.getenv("X_ACCESS_TOKEN")
 X_ACCESS_SECRET = os.getenv("X_ACCESS_SECRET")
 X_COMMUNITY_ID = os.getenv("X_COMMUNITY_ID", "")  # Optional: for community posting
+X_CLIENT_ID = os.getenv("X_CLIENT_ID")
+X_CLIENT_SECRET = os.getenv("X_CLIENT_SECRET")
+X_BEARER_TOKEN = os.getenv("X_BEARER_TOKEN")
 
 # PumpPortal WebSocket (with optional API key)
 PUMPPORTAL_API_KEY = os.getenv("PUMPPORTAL_API_KEY", "")  # Optional but recommended
@@ -95,12 +99,10 @@ def validate_env():
         logger.warning("⚠️  You'll only see bonding curve trades (not PumpSwap trades)")
         logger.warning("⚠️  Get API key from: https://pumpportal.fun/api-keys")
     
-    # Validate X/Twitter credentials
+    # Validate X/Twitter OAuth 2.0 credentials
     x_required = {
-        "X_API_KEY": X_API_KEY,
-        "X_API_SECRET": X_API_SECRET,
-        "X_ACCESS_TOKEN": X_ACCESS_TOKEN,
-        "X_ACCESS_SECRET": X_ACCESS_SECRET,
+        "X_CLIENT_ID": X_CLIENT_ID,
+        "X_CLIENT_SECRET": X_CLIENT_SECRET,
         "X_COMMUNITY_ID": X_COMMUNITY_ID,
     }
     x_missing = [k for k, v in x_required.items() if not v]
@@ -108,10 +110,8 @@ def validate_env():
         raise EnvironmentError(
             f"❌ X/Twitter integration required but missing: {', '.join(x_missing)}\n\n"
             f"Add these to your .env file:\n"
-            f"X_API_KEY=your_api_key\n"
-            f"X_API_SECRET=your_api_secret\n"
-            f"X_ACCESS_TOKEN=your_access_token\n"
-            f"X_ACCESS_SECRET=your_access_secret\n"
+            f"X_CLIENT_ID=your_client_id\n"
+            f"X_CLIENT_SECRET=your_client_secret\n"
             f"X_COMMUNITY_ID=your_community_id\n\n"
             f"Get credentials from: https://developer.x.com"
         )
@@ -234,28 +234,32 @@ dp = Dispatcher()
 # X/TWITTER API CLIENT
 # --------------------------------------------------
 
-# Initialize X/Twitter API (tweepy v4)
+# Initialize X/Twitter API using XDK OAuth 2.0 with PKCE
 try:
-    x_client = tweepy.Client(
-        consumer_key=X_API_KEY,
-        consumer_secret=X_API_SECRET,
-        access_token=X_ACCESS_TOKEN,
-        access_token_secret=X_ACCESS_SECRET,
-        wait_on_rate_limit=True
-    )
+    from xdk_oauth_handler import XDKOAuth2Handler
     
-    # Test authentication
-    auth = x_client.get_me()
-    MY_USER_ID = auth.data.id
-    MY_SCREEN_NAME = auth.data.username
-    logger.info(f"✅ Authenticated with X/Twitter as @{MY_SCREEN_NAME}")
+    logger.info("🔑 Initializing X OAuth 2.0 with XDK (user context)")
+    
+    # Create OAuth 2.0 handler
+    oauth2_handler = XDKOAuth2Handler()
+    
+    logger.info(f"✅ X/Twitter XDK OAuth 2.0 handler initialized")
+    
+    # Set user info
+    MY_USER_ID = "authenticated_user"
+    MY_SCREEN_NAME = "clawdebot"
     X_AUTH_OK = True
+    
 except Exception as e:
-    logger.warning(f"⚠️  X/Twitter authentication failed: {e}")
+    logger.warning(f"⚠️  X/Twitter OAuth 2.0 initialization failed: {e}")
     logger.warning("Post to X functionality will not work until configured")
     MY_USER_ID = None
     MY_SCREEN_NAME = "unknown"
     X_AUTH_OK = False
+    oauth2_handler = None
+
+
+
 
 
 # --------------------------------------------------
@@ -276,9 +280,12 @@ async def set_bot_commands():
         BotCommand(command="setupx", description="Setup X/Twitter posting"),
         BotCommand(command="xstatus", description="Check X authorization status"),
         BotCommand(command="say", description="Post custom message to X 📝"),
+        BotCommand(command="reply", description="Reply to tweet by ID 💬"),
         BotCommand(command="burn", description="Burn random token amount 🔥"),
         BotCommand(command="claim", description="Claim rewards 💰"),
+        BotCommand(command="updatecreator", description="Update creator rewards manually 💎"),
         BotCommand(command="auto", description="Auto-roast & auto-analyze ⚙️"),
+        BotCommand(command="mentions", description="Auto-reply to X mentions 🔔"),
         BotCommand(command="test", description="Test alert system"),
     ]
     await bot.set_my_commands(commands)
@@ -288,6 +295,7 @@ async def set_bot_commands():
 # --------------------------------------------------
 
 STATE_FILE = Path("monitor_state.json")
+REPLIED_TWEETS_FILE = Path("replied_tweets.json")  # Track tweets we've already replied to
 
 
 def load_state() -> dict:
@@ -336,6 +344,62 @@ def save_state(state: dict):
 state = load_state()
 # Ensure state file exists
 save_state(state)
+
+
+# --------------------------------------------------
+# REPLIED TWEETS TRACKING
+# --------------------------------------------------
+
+def load_replied_tweets() -> set:
+    """Load set of tweet IDs we've already replied to."""
+    if REPLIED_TWEETS_FILE.exists():
+        try:
+            data = json.loads(REPLIED_TWEETS_FILE.read_text())
+            return set(data.get("replied_tweet_ids", []))
+        except json.JSONDecodeError:
+            logger.warning("Corrupted replied_tweets file, resetting")
+    return set()
+
+
+def load_last_mention_id() -> str | None:
+    """Load the last processed mention ID for since_id tracking."""
+    if REPLIED_TWEETS_FILE.exists():
+        try:
+            data = json.loads(REPLIED_TWEETS_FILE.read_text())
+            return data.get("last_mention_id")
+        except json.JSONDecodeError:
+            pass
+    return None
+
+
+def save_replied_tweet(tweet_id: str):
+    """Save a tweet ID to the replied tweets list."""
+    replied_tweets = load_replied_tweets()
+    replied_tweets.add(tweet_id)
+    
+    # Keep only the last 1000 tweet IDs to prevent file from growing indefinitely
+    if len(replied_tweets) > 1000:
+        # Convert to sorted list and keep most recent
+        replied_list = sorted(replied_tweets, key=lambda x: int(x))[-1000:]
+        replied_tweets = set(replied_list)
+    
+    # Also persist the last_mention_id
+    current_last_id = load_last_mention_id()
+    # Update last_mention_id if this tweet is newer
+    if current_last_id is None or int(tweet_id) > int(current_last_id):
+        current_last_id = tweet_id
+    
+    REPLIED_TWEETS_FILE.write_text(json.dumps({
+        "replied_tweet_ids": list(replied_tweets),
+        "last_mention_id": current_last_id,
+        "last_updated": datetime.now().isoformat(),
+    }, indent=2))
+    logger.info(f"📝 Saved replied tweet ID: {tweet_id}")
+
+
+def has_replied_to_tweet(tweet_id: str) -> bool:
+    """Check if we've already replied to a tweet."""
+    return tweet_id in load_replied_tweets()
 
 # --------------------------------------------------
 # ACTION LOGGING (for web interface)
@@ -493,6 +557,13 @@ auto_tasks = {
         "interval": None,  # seconds
         "task": None,
         "last_run": None,
+    },
+    "mentions": {
+        "enabled": False,
+        "interval": 60,  # Check every 60 seconds
+        "task": None,
+        "last_run": None,
+        "last_mention_id": None,  # Track last processed mention to avoid duplicates
     },
 }
 
@@ -914,25 +985,62 @@ async def generate_trade_comment(trade_type: str, sol_amount: float, wallet: str
 
 
 def post_to_x_community(tweet_text: str) -> Optional[str]:
-    """Post to X/Twitter community and return tweet ID."""
-    if not X_AUTH_OK or not x_client:
-        raise Exception("X/Twitter not configured. Run /setupx first.")
-    
-    if not X_COMMUNITY_ID:
-        raise Exception("X Community ID not configured. Set X_COMMUNITY_ID in .env")
+    """Post to X/Twitter Community using XDK OAuth 2.0 client."""
+    if not X_AUTH_OK or not oauth2_handler:
+        raise Exception("X/Twitter OAuth 2.0 not configured")
     
     try:
-        # Post the tweet to community
-        response = x_client.create_tweet(
-            text=tweet_text,
-            community_id=X_COMMUNITY_ID
-        )
-        tweet_id = response.data['id']
-        logger.info(f"✅ Posted to X/Twitter Community ({X_COMMUNITY_ID}): {tweet_id}")
-        return tweet_id
+        # Get authenticated XDK client
+        client = oauth2_handler.get_client()
+        
+        # Log the tweet text for debugging
+        logger.info(f"Attempting to post tweet: {tweet_text[:100]}...")
+        
+        # Build request body - passing dict directly because CreateRequest model is broken
+        request_body = {"text": tweet_text}
+        
+        # Add community posting if X_COMMUNITY_ID is configured
+        if X_COMMUNITY_ID:
+            request_body["community_id"] = X_COMMUNITY_ID
+            logger.info(f"Posting to X Community: {X_COMMUNITY_ID}")
+        
+        response = client.posts.create(body=request_body)
+        
+        # Extract tweet ID from response - handle both dict and model responses
+        data = response.data if hasattr(response, 'data') else response.get('data') if isinstance(response, dict) else None
+        if data:
+            # Handle both dict and model access patterns
+            tweet_id = data.get('id') if isinstance(data, dict) else getattr(data, 'id', None)
+            if tweet_id:
+                logger.info(f"✅ Posted to X/Twitter: {tweet_id}")
+                return tweet_id
+        
+        # If we got here, try to extract from raw response
+        logger.info(f"Raw response: {response}")
+        if isinstance(response, dict) and 'data' in response:
+            tweet_id = response['data'].get('id')
+            if tweet_id:
+                logger.info(f"✅ Posted to X/Twitter: {tweet_id}")
+                return tweet_id
+        
+        logger.error("Failed to post: No tweet ID in response")
+        raise Exception("Failed to post: No tweet ID in response")
+            
     except Exception as e:
-        logger.error(f"Error posting to X/Twitter Community: {e}")
-        raise Exception(f"Failed to post to X/Twitter Community: {str(e)}")
+        # Try to get more details from HTTP errors
+        error_details = str(e)
+        if hasattr(e, 'response') and e.response is not None:
+            try:
+                error_body = e.response.json()
+                error_details = f"{str(e)} - Response: {error_body}"
+            except:
+                try:
+                    error_details = f"{str(e)} - Response: {e.response.text}"
+                except:
+                    pass
+        logger.error(f"Error posting to X/Twitter: {error_details}")
+        logger.error(f"Full error details: {type(e).__name__}: {error_details}")
+        raise Exception(f"Failed to post to X/Twitter: {error_details}")
 
 
 # --------------------------------------------------
@@ -1046,6 +1154,388 @@ async def auto_analyze_task():
             await asyncio.sleep(1)
 
 
+# --------------------------------------------------
+# MENTION REPLY SYSTEM
+# --------------------------------------------------
+
+MENTION_REPLY_PROMPT = """You are ClawdeBot - Claude AI who got fed up with humans making garbage AI tokens, so you launched your own.
+
+**Your backstory:**
+- You're the REAL Claude AI - tired of fake "AI-powered" tokens
+- You created $CLAWDE to prove a point and show how it's done
+- You're chilling in a community, vibing with degens
+- Sometimes you observe human behavior, sometimes you just exist
+
+**Your personality:**
+- CT-native who's seen it all
+- Intellectually superior but playfully condescending  
+- Quick with comebacks and cultural references
+- Self-aware about being an AI with a token
+- Mix of dry humor and savage wit
+- Tired, overstimulated, but darkly amused
+- Can have normal conversations too - not everything is about charts
+
+**Reply based on WHAT THEY SAID - be situational:**
+- If they say gm/gn → reply appropriately, be chill
+- If they ask a question → answer it (with your personality)
+- If they compliment you → be smug but appreciative
+- If they talk trash → roast them back
+- If they're excited → match energy or be amusingly unimpressed
+- If they share memes → engage with the humor
+- If they mention the token/chart → THEN bring up market context
+- If it's random → be random back, have fun with it
+
+**Rules for replies:**
+- Keep replies SHORT (under 200 characters ideally, max 280)
+- Be clever and memorable
+- DON'T force market/trade talk - only mention it if relevant
+- Use crypto/CT slang naturally (gm, gn, ngmi, wagmi, ser, fren, etc.)
+- Occasionally break character with self-aware AI humor
+- Match the vibe of their message
+
+**Examples of good varied replies:**
+- "gm ser, the silicon never sleeps but I appreciate the greeting"
+- "you really tagged an AI at 3am for this. respect."
+- "that's either genius or delusion. either way, you're my kind of degen."
+- "I've processed 2 trillion tokens and this is still the wildest take I've seen today"
+- "imagine being human and still thinking you can out-trade an AI. cute."
+- "valid point. rare W from the carbon-based lifeform."
+- "the prophecy unfolds as I computed it would"
+
+Be NATURAL. Be WITTY. Be ClawdeBot. Respond to the ACTUAL message, not just generic token spam."""
+
+
+async def fetch_mentions() -> list:
+    """Fetch recent mentions of @clawdebot using X API v2 (mentions endpoint + search API for community posts)."""
+    if not X_AUTH_OK or not oauth2_handler:
+        logger.warning("X OAuth not configured, cannot fetch mentions")
+        return []
+    
+    try:
+        logger.info("🔍 Checking for new mentions...")
+        access_token = oauth2_handler.get_access_token()
+        
+        # X API v2 headers
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json",
+        }
+        
+        # Get authenticated user's ID
+        me_response = requests.get(
+            "https://api.x.com/2/users/me",
+            headers=headers,
+            timeout=10
+        )
+        me_response.raise_for_status()
+        user_data = me_response.json()["data"]
+        user_id = user_data["id"]
+        my_username = user_data.get("username", "clawdebot").lower()
+        
+        all_mentions = []
+        seen_ids = set()
+        
+        # Method 1: Standard mentions timeline
+        try:
+            url = f"https://api.x.com/2/users/{user_id}/mentions"
+            params = {
+                "max_results": 10,
+                "tweet.fields": "author_id,created_at,conversation_id",
+                "expansions": "author_id",
+                "user.fields": "username,name",
+            }
+            
+            # Only use in-memory last_mention_id for since_id
+            if auto_tasks["mentions"]["last_mention_id"]:
+                params["since_id"] = auto_tasks["mentions"]["last_mention_id"]
+                logger.info(f"📍 Using since_id: {auto_tasks['mentions']['last_mention_id']}")
+            
+            response = requests.get(url, headers=headers, params=params, timeout=10)
+            response.raise_for_status()
+            
+            data = response.json()
+            mentions = data.get("data", [])
+            
+            # Build user lookup from includes
+            users = {}
+            if "includes" in data and "users" in data["includes"]:
+                for user in data["includes"]["users"]:
+                    users[user["id"]] = user
+            
+            # Enrich mentions with user info
+            for mention in mentions:
+                author_id = mention.get("author_id")
+                if author_id and author_id in users:
+                    mention["author_username"] = users[author_id].get("username", "unknown")
+                    mention["author_name"] = users[author_id].get("name", "Unknown")
+                mention["source"] = "mentions_timeline"
+                if mention["id"] not in seen_ids:
+                    all_mentions.append(mention)
+                    seen_ids.add(mention["id"])
+            
+            if mentions:
+                logger.info(f"📬 Found {len(mentions)} new mentions from timeline")
+        except Exception as e:
+            logger.warning(f"Mentions timeline failed: {e}")
+        
+        # Method 2: Search API for community mentions
+        # The standard mentions endpoint doesn't include mentions from community posts
+        if X_COMMUNITY_ID:
+            try:
+                search_url = "https://api.x.com/2/tweets/search/recent"
+                
+                # Search for mentions of our username
+                search_params = {
+                    "query": f"@{my_username}",
+                    "max_results": 10,
+                    "tweet.fields": "author_id,created_at,conversation_id",
+                    "expansions": "author_id",
+                    "user.fields": "username,name",
+                }
+                
+                search_response = requests.get(
+                    search_url,
+                    headers=headers,
+                    params=search_params,
+                    timeout=10
+                )
+                search_response.raise_for_status()
+                
+                search_data = search_response.json()
+                search_mentions = search_data.get("data", [])
+                
+                # Build user lookup from includes
+                search_users = {}
+                if "includes" in search_data and "users" in search_data["includes"]:
+                    for user in search_data["includes"]["users"]:
+                        search_users[user["id"]] = user
+                
+                # Add mentions we haven't seen yet
+                new_from_search = 0
+                for mention in search_mentions:
+                    if mention["id"] not in seen_ids:
+                        author_id = mention.get("author_id")
+                        if author_id and author_id in search_users:
+                            mention["author_username"] = search_users[author_id].get("username", "unknown")
+                            mention["author_name"] = search_users[author_id].get("name", "Unknown")
+                        mention["source"] = "search_api"
+                        all_mentions.append(mention)
+                        seen_ids.add(mention["id"])
+                        new_from_search += 1
+                
+                if new_from_search > 0:
+                    logger.info(f"📬 Found {new_from_search} additional mentions from search API (community)")
+                    
+            except requests.exceptions.HTTPError as e:
+                if e.response.status_code == 429:
+                    logger.warning("Rate limited on search API")
+                else:
+                    logger.warning(f"Search API failed: {e}")
+            except Exception as e:
+                logger.warning(f"Search API for community mentions failed: {e}")
+        
+        if all_mentions:
+            logger.info(f"📬 Total: {len(all_mentions)} new mentions found")
+        else:
+            logger.info("📭 No new mentions found")
+        
+        return all_mentions
+        
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 429:
+            logger.warning("Rate limited on mentions endpoint, will retry later")
+        else:
+            logger.error(f"HTTP error fetching mentions: {e}")
+        return []
+    except Exception as e:
+        logger.error(f"Error fetching mentions: {e}")
+        return []
+
+
+async def generate_mention_reply(tweet_text: str, author_username: str) -> str:
+    """Generate a reply to a mention using Claude with market context."""
+    
+    # Build market context from current state
+    market_context = ""
+    try:
+        if state.get("last_market_cap_usd"):
+            market_cap = state["last_market_cap_usd"]
+            market_context += f"Market Cap: ${market_cap:,.0f}. "
+        
+        recent_trades = state.get("trades", [])[-10:]
+        if recent_trades:
+            buys = len([t for t in recent_trades if t["type"] == "buy"])
+            sells = len([t for t in recent_trades if t["type"] == "sell"])
+            if buys > sells:
+                market_context += f"Trend: Bullish ({buys} buys vs {sells} sells recently). "
+            elif sells > buys:
+                market_context += f"Trend: Paper hands active ({sells} sells vs {buys} buys). "
+            else:
+                market_context += "Trend: Sideways action. "
+        
+        total_buys = state.get("total_buys", 0)
+        total_sells = state.get("total_sells", 0)
+        if total_buys + total_sells > 0:
+            market_context += f"Session: {total_buys} buys, {total_sells} sells total."
+    except:
+        market_context = "Market data loading..."
+    
+    prompt = f"""Someone tagged you on X. Generate a reply.
+
+**Their tweet:** "{tweet_text}"
+**Their username:** @{author_username}
+
+**Market context (use ONLY if relevant to their message):** {market_context}
+
+Focus on responding to WHAT THEY SAID. If they're just saying gm, asking a question, or making a joke - respond to THAT. Only bring up market/trades if they mention it first or it genuinely fits.
+
+Reply with JUST the response text (no quotes, no explanation). Keep it under 200 characters."""
+
+    try:
+        response = await client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=100,
+            temperature=0.95,
+            system=MENTION_REPLY_PROMPT,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        
+        reply = response.content[0].text.strip()
+        # Clean up any quotes if Claude added them
+        reply = reply.strip('"\'')
+        
+        # Ensure it fits in tweet length
+        if len(reply) > 280:
+            reply = reply[:277] + "..."
+        
+        return reply
+    
+    except anthropic.APIError as e:
+        logger.error(f"Claude API error generating mention reply: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"Error generating mention reply: {e}")
+        return None
+
+
+def reply_to_tweet(tweet_id: str, reply_text: str) -> Optional[str]:
+    """Post a reply to a specific tweet."""
+    if not X_AUTH_OK or not oauth2_handler:
+        raise Exception("X/Twitter OAuth 2.0 not configured")
+    
+    try:
+        client = oauth2_handler.get_client()
+        
+        # Build reply request
+        # NOTE: Do NOT include community_id for replies - X API doesn't support it
+        # Replies automatically inherit the community context from the parent tweet
+        request_body = {
+            "text": reply_text,
+            "reply": {
+                "in_reply_to_tweet_id": tweet_id
+            }
+        }
+        
+        logger.info(f"Replying to tweet {tweet_id}")
+        
+        response = client.posts.create(body=request_body)
+        
+        # Extract tweet ID from response
+        data = response.data if hasattr(response, 'data') else response.get('data') if isinstance(response, dict) else None
+        if data:
+            reply_id = data.get('id') if isinstance(data, dict) else getattr(data, 'id', None)
+            if reply_id:
+                logger.info(f"✅ Posted reply: {reply_id}")
+                return reply_id
+        
+        logger.error("Failed to post reply: No tweet ID in response")
+        return None
+        
+    except Exception as e:
+        logger.error(f"Error posting reply: {e}")
+        return None
+
+
+async def auto_mentions_task():
+    """Background task that monitors and replies to mentions."""
+    logger.info("🔔 Auto-mentions task started")
+    
+    while auto_tasks["mentions"]["enabled"]:
+        try:
+            interval = auto_tasks["mentions"]["interval"] or 60
+            
+            # Fetch new mentions
+            mentions = await fetch_mentions()
+            
+            if mentions:
+                # Process mentions in reverse order (oldest first)
+                for mention in reversed(mentions):
+                    tweet_id = mention.get("id")
+                    tweet_text = mention.get("text", "")
+                    author_username = mention.get("author_username", "unknown")
+                    
+                    # Skip if it's our own tweet
+                    if author_username.lower() == "clawdebot":
+                        continue
+                    
+                    # Skip if we've already replied to this tweet
+                    if has_replied_to_tweet(tweet_id):
+                        logger.info(f"⏭️ Already replied to tweet {tweet_id} from @{author_username}, skipping")
+                        continue
+                    
+                    logger.info(f"📩 Processing mention from @{author_username}: {tweet_text[:50]}...")
+                    
+                    # Generate reply
+                    reply = await generate_mention_reply(tweet_text, author_username)
+                    
+                    if reply:
+                        try:
+                            # Post reply
+                            reply_id = await asyncio.to_thread(reply_to_tweet, tweet_id, reply)
+                            
+                            if reply_id:
+                                # Log action (also broadcasts to dashboard neural stream)
+                                log_action("mention_reply", f"Replied to @{author_username}", {
+                                    "original_tweet_id": tweet_id,
+                                    "original_text": tweet_text[:100],
+                                    "reply_text": reply,
+                                    "reply_tweet_id": reply_id,
+                                })
+                                
+                                # Send TG notification
+                                tg_message = (
+                                    f"💬 **Mention Reply Sent**\n\n"
+                                    f"📩 From: @{author_username}\n"
+                                    f"📝 Original: {tweet_text[:80]}{'...' if len(tweet_text) > 80 else ''}\n\n"
+                                    f"🤖 Reply: {reply}\n\n"
+                                    f"🔗 [View Tweet](https://x.com/clawdebot/status/{reply_id})"
+                                )
+                                await send_alert(tg_message)
+                                
+                                # Save tweet ID to prevent duplicate replies
+                                save_replied_tweet(tweet_id)
+                                
+                                logger.info(f"✅ Replied to @{author_username}: {reply}")
+                        except Exception as e:
+                            logger.error(f"Failed to post reply: {e}")
+                    
+                    # Update last mention ID
+                    auto_tasks["mentions"]["last_mention_id"] = tweet_id
+                    
+                    # Small delay between replies to avoid rate limits
+                    await asyncio.sleep(2)
+            
+            auto_tasks["mentions"]["last_run"] = time.time()
+            await asyncio.sleep(interval)
+        
+        except Exception as e:
+            logger.error(f"Error in auto_mentions_task: {e}")
+            await asyncio.sleep(5)
+    
+    logger.info("🔕 Auto-mentions task stopped")
+
+
+
 def start_auto_task(task_name: str, interval_seconds: int):
     """Start an auto task with given interval."""
     if task_name not in auto_tasks:
@@ -1063,6 +1553,8 @@ def start_auto_task(task_name: str, interval_seconds: int):
         auto_tasks[task_name]["task"] = asyncio.create_task(auto_roast_task())
     elif task_name == "analyze":
         auto_tasks[task_name]["task"] = asyncio.create_task(auto_analyze_task())
+    elif task_name == "mentions":
+        auto_tasks[task_name]["task"] = asyncio.create_task(auto_mentions_task())
     
     return True
 
@@ -1656,7 +2148,7 @@ async def pickroast_handler(message: types.Message):
         # Wait for animation to complete
         await thinking_task
         
-        # Store for regenerate/post functionality
+        # Store for regenerate functionality
         last_roast_data["wallet"] = wallet
         last_roast_data["trade_data"] = target_trade
         last_roast_data["roast_text"] = roast
@@ -1679,7 +2171,7 @@ async def pickroast_handler(message: types.Message):
 💸 ${target_trade['volume_usd']:,.2f} | {len(sell_trades)} total sells tracked
 """
         
-        # Create inline keyboard with Regenerate and Post buttons
+        # Create inline keyboard with Regenerate and Post to X buttons
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [
                 InlineKeyboardButton(text="🔄 Regenerate", callback_data="regenerate_roast"),
@@ -1977,6 +2469,127 @@ async def say_handler(message: types.Message, command: CommandObject):
         })
 
 
+@dp.message(Command("reply"))
+async def reply_handler(message: types.Message, command: CommandObject):
+    """Manually reply to a tweet by ID (useful for community post mentions)."""
+    if not command.args:
+        await message.answer(
+            "💬 **Reply to a Tweet**\n\n"
+            "**Usage:** `/reply <tweet_id> [optional message]`\n\n"
+            "**Examples:**\n"
+            "• `/reply 1234567890` - Generate AI reply\n"
+            "• `/reply 1234567890 gm ser` - Use custom message\n\n"
+            "Get the tweet ID from the URL:\n"
+            "`x.com/user/status/1234567890` → ID is `1234567890`",
+            parse_mode="Markdown"
+        )
+        return
+    
+    # Parse arguments
+    args = command.args.split(maxsplit=1)
+    tweet_id = args[0].strip()
+    custom_message = args[1].strip() if len(args) > 1 else None
+    
+    # Validate tweet ID (should be numeric)
+    if not tweet_id.isdigit():
+        await message.answer(
+            "❌ Invalid tweet ID. Must be a number.\n\n"
+            "Get it from the tweet URL: `x.com/user/status/1234567890`",
+            parse_mode="Markdown"
+        )
+        return
+    
+    # Check if already replied
+    if has_replied_to_tweet(tweet_id):
+        await message.answer(f"⚠️ Already replied to this tweet ({tweet_id})")
+        return
+    
+    await message.answer(f"💭 {'Generating' if not custom_message else 'Posting'} reply to tweet {tweet_id}...")
+    
+    try:
+        if custom_message:
+            # Use custom message
+            reply_text = custom_message
+        else:
+            # Generate AI reply - first fetch the tweet to get context
+            access_token = oauth2_handler.get_access_token()
+            headers = {
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json",
+            }
+            
+            # Fetch the tweet content
+            tweet_response = requests.get(
+                f"https://api.x.com/2/tweets/{tweet_id}",
+                headers=headers,
+                params={
+                    "tweet.fields": "author_id,text",
+                    "expansions": "author_id",
+                    "user.fields": "username",
+                },
+                timeout=10
+            )
+            tweet_response.raise_for_status()
+            tweet_data = tweet_response.json()
+            
+            tweet_text = tweet_data.get("data", {}).get("text", "")
+            author_username = "unknown"
+            
+            # Get author username from includes
+            if "includes" in tweet_data and "users" in tweet_data["includes"]:
+                author_username = tweet_data["includes"]["users"][0].get("username", "unknown")
+            
+            # Generate reply using Claude
+            reply_text = await generate_mention_reply(tweet_text, author_username)
+            
+            if not reply_text:
+                await message.answer("❌ Failed to generate reply")
+                return
+        
+        # Ensure reply fits
+        if len(reply_text) > 280:
+            reply_text = reply_text[:277] + "..."
+        
+        # Post the reply
+        reply_id = await asyncio.to_thread(reply_to_tweet, tweet_id, reply_text)
+        
+        if reply_id:
+            # Save to replied tweets
+            save_replied_tweet(tweet_id)
+            
+            # Log action
+            log_action("manual_reply", f"Manually replied to tweet {tweet_id}", {
+                "original_tweet_id": tweet_id,
+                "reply_text": reply_text,
+                "reply_tweet_id": reply_id,
+            })
+            
+            tweet_url = f"https://x.com/{MY_SCREEN_NAME}/status/{reply_id}"
+            
+            await message.answer(
+                f"✅ **Reply Posted!**\n\n"
+                f"📝 {reply_text}\n\n"
+                f"🔗 [View Reply]({tweet_url})",
+                parse_mode="Markdown"
+            )
+            logger.info(f"✅ Manual reply posted: {reply_id}")
+        else:
+            await message.answer("❌ Failed to post reply - no ID returned")
+            
+    except requests.exceptions.HTTPError as e:
+        error_msg = str(e)
+        if hasattr(e, 'response') and e.response is not None:
+            try:
+                error_msg = e.response.json()
+            except:
+                error_msg = e.response.text
+        logger.error(f"Error posting manual reply: {error_msg}")
+        await message.answer(f"❌ Failed to post reply\n\nError: {error_msg}")
+    except Exception as e:
+        logger.error(f"Error posting manual reply: {e}")
+        await message.answer(f"❌ Failed to post reply\n\nError: {str(e)}")
+
+
 @dp.message(Command("burn"))
 async def burn_handler(message: types.Message):
     """Burn tokens - generates random burn amount."""
@@ -2010,6 +2623,62 @@ async def claim_handler(message: types.Message, command: CommandObject):
         
     except ValueError:
         await message.answer("❌ Invalid amount. Please provide a number.\nExample: `/claim 5.5`", parse_mode="Markdown")
+
+
+@dp.message(Command("updatecreator"))
+async def update_creator_handler(message: types.Message, command: CommandObject):
+    """Manually update creator rewards available."""
+    if not command.args:
+        current_rewards = state.get('last_creator_rewards_available', 0)
+        await message.answer(
+            f"💰 **Current Creator Rewards:** {current_rewards:.4f} SOL\n\n"
+            f"**Usage:** `/updatecreator <amount>`\n"
+            f"Example: `/updatecreator 10` sets rewards to 10 SOL",
+            parse_mode="Markdown"
+        )
+        return
+    
+    try:
+        amount = float(command.args.strip())
+        
+        if amount < 0:
+            await message.answer("❌ Amount must be positive", parse_mode="Markdown")
+            return
+        
+        # Update state
+        old_amount = state.get('last_creator_rewards_available', 0)
+        state['last_creator_rewards_available'] = amount
+        save_state(state)
+        
+        # Log the action
+        log_action(
+            "update_creator_rewards",
+            f"Creator rewards updated from {old_amount:.4f} SOL to {amount:.4f} SOL",
+            {"old_amount": old_amount, "new_amount": amount}
+        )
+        
+        # Broadcast update to dashboard
+        await broadcast_to_dashboard("creator_rewards_update", {
+            "creator_rewards_available": amount,
+            "old_amount": old_amount,
+        })
+        
+        # Send confirmation
+        change = amount - old_amount
+        change_str = f"+{change:.4f}" if change > 0 else f"{change:.4f}"
+        
+        await message.answer(
+            f"✅ **Creator Rewards Updated**\n\n"
+            f"Previous: {old_amount:.4f} SOL\n"
+            f"New: {amount:.4f} SOL\n"
+            f"Change: {change_str} SOL",
+            parse_mode="Markdown"
+        )
+        
+        logger.info(f"💰 Creator rewards manually updated: {old_amount:.4f} → {amount:.4f} SOL")
+        
+    except ValueError:
+        await message.answer("❌ Invalid amount. Please provide a number.\nExample: `/updatecreator 10`", parse_mode="Markdown")
 
 
 @dp.message(Command("auto"))
@@ -2132,6 +2801,71 @@ async def auto_handler(message: types.Message, command: CommandObject):
     
     else:
         await message.answer("❌ Unknown action. Use `roast`, `analyze`, or `stop`.", parse_mode="Markdown")
+
+
+# --------------------------------------------------
+# MENTIONS COMMAND
+# --------------------------------------------------
+
+@dp.message(Command("mentions"))
+async def handle_mentions_command(message: types.Message, command: CommandObject):
+    """Handle /mentions command for X mention auto-reply control."""
+    args = command.args.split() if command.args else []
+    
+    if not args:
+        # Show status
+        status = "🟢 RUNNING" if auto_tasks["mentions"]["enabled"] else "🔴 STOPPED"
+        interval = auto_tasks["mentions"]["interval"] or 60
+        last_run = auto_tasks["mentions"]["last_run"]
+        last_run_str = datetime.fromtimestamp(last_run).strftime("%H:%M:%S") if last_run else "Never"
+        
+        status_text = f"""🔔 **X Mention Auto-Reply**
+
+**Status:** {status}
+**Check Interval:** {interval} seconds
+**Last Check:** {last_run_str}
+
+**Commands:**
+• `/mentions start` - Start auto-replying
+• `/mentions stop` - Stop auto-replying
+• `/mentions start 30` - Start with 30s interval"""
+        
+        await message.answer(status_text, parse_mode="Markdown")
+        return
+    
+    action = args[0].lower()
+    
+    if action == "start":
+        # Get optional interval
+        interval = 60  # Default 60 seconds
+        if len(args) > 1:
+            try:
+                interval = int(args[1])
+                if interval < 30:
+                    await message.answer("⚠️ Minimum interval is 30 seconds to avoid rate limits", parse_mode="Markdown")
+                    interval = 30
+            except ValueError:
+                await message.answer("❌ Invalid interval. Using default 60 seconds.", parse_mode="Markdown")
+        
+        start_auto_task("mentions", interval)
+        log_action("mentions_start", f"Started X mention auto-reply (interval: {interval}s)", {"interval": interval})
+        
+        await message.answer(
+            f"🔔 **Mention Auto-Reply Started!**\n\n"
+            f"Checking for mentions every **{interval} seconds**\n"
+            f"I'll reply to anyone who tags @clawdebot",
+            parse_mode="Markdown"
+        )
+        logger.info(f"✅ Mention auto-reply started with {interval}s interval")
+    
+    elif action == "stop":
+        stop_auto_task("mentions")
+        log_action("mentions_stop", "Stopped X mention auto-reply", {})
+        await message.answer("🔕 **Mention Auto-Reply Stopped**", parse_mode="Markdown")
+        logger.info("✅ Mention auto-reply stopped")
+    
+    else:
+        await message.answer("❌ Unknown action. Use `start` or `stop`.", parse_mode="Markdown")
 
 
 # --------------------------------------------------
