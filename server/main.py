@@ -284,6 +284,7 @@ async def set_bot_commands():
         BotCommand(command="burn", description="Burn random token amount 🔥"),
         BotCommand(command="claim", description="Claim rewards 💰"),
         BotCommand(command="updatecreator", description="Update creator rewards manually 💎"),
+        BotCommand(command="ban", description="Ban a user for violating rules 🚫"),
         BotCommand(command="auto", description="Auto-roast & auto-analyze ⚙️"),
         BotCommand(command="mentions", description="Auto-reply to X mentions 🔔"),
         BotCommand(command="test", description="Test alert system"),
@@ -2623,6 +2624,17 @@ async def claim_handler(message: types.Message, command: CommandObject):
         
     except ValueError:
         await message.answer("❌ Invalid amount. Please provide a number.\nExample: `/claim 5.5`", parse_mode="Markdown")
+
+
+@dp.message(Command("ban"))
+async def ban_handler(message: types.Message):
+    """Ban a user for violating rules."""
+    ban_message = "🚫 Banned a user for violating the rules"
+    
+    await message.answer(ban_message)
+    log_action("ban", "User banned for violating the rules", {})
+    
+    logger.info("🚫 Ban command executed")
 
 
 @dp.message(Command("updatecreator"))

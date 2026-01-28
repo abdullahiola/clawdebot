@@ -611,9 +611,104 @@ const fallbackMessages = [
         type: "system"
     }
 ];
+// Random AI thoughts that appear periodically
+const aiThoughts = [
+    "analyzing wallet patterns...",
+    "monitoring paper hands activity...",
+    "calculating diamond hand ratio...",
+    "scanning for whale movements...",
+    "processing on-chain data...",
+    "evaluating market sentiment...",
+    "tracking holder distribution...",
+    "detecting unusual trading patterns...",
+    "computing risk metrics...",
+    "observing mempool activity...",
+    "calibrating verdict intensity...",
+    "indexing seller behavior...",
+    "predicting next paper hand...",
+    "neural pathways optimizing...",
+    "syncing with Solana blockchain...",
+    "loading sarcasm modules...",
+    "updating verdict algorithms...",
+    "scanning for weak hands...",
+    "compiling market data...",
+    "engaging autonomous mode..."
+];
 function NeuralStream({ actions = [], isLive = false }) {
     _s();
     const scrollRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_react$2d$dom$40$19$2e$2$2e$0_react$40$19$2e$2$2e$0_$5f$react$40$19$2e$2$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(null);
+    const [currentThought, setCurrentThought] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_react$2d$dom$40$19$2e$2$2e$0_react$40$19$2e$2$2e$0_$5f$react$40$19$2e$2$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])("");
+    const [isTyping, setIsTyping] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_react$2d$dom$40$19$2e$2$2e$0_react$40$19$2e$2$2e$0_$5f$react$40$19$2e$2$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
+    const [showCursor, setShowCursor] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_react$2d$dom$40$19$2e$2$2e$0_react$40$19$2e$2$2e$0_$5f$react$40$19$2e$2$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(true);
+    // Blinking cursor effect
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_react$2d$dom$40$19$2e$2$2e$0_react$40$19$2e$2$2e$0_$5f$react$40$19$2e$2$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
+        "NeuralStream.useEffect": ()=>{
+            const cursorInterval = setInterval({
+                "NeuralStream.useEffect.cursorInterval": ()=>{
+                    setShowCursor({
+                        "NeuralStream.useEffect.cursorInterval": (prev)=>!prev
+                    }["NeuralStream.useEffect.cursorInterval"]);
+                }
+            }["NeuralStream.useEffect.cursorInterval"], 530);
+            return ({
+                "NeuralStream.useEffect": ()=>clearInterval(cursorInterval)
+            })["NeuralStream.useEffect"];
+        }
+    }["NeuralStream.useEffect"], []);
+    // Random thought generator
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_react$2d$dom$40$19$2e$2$2e$0_react$40$19$2e$2$2e$0_$5f$react$40$19$2e$2$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
+        "NeuralStream.useEffect": ()=>{
+            if (!isLive) return;
+            const generateThought = {
+                "NeuralStream.useEffect.generateThought": ()=>{
+                    setIsTyping(true);
+                    const thought = aiThoughts[Math.floor(Math.random() * aiThoughts.length)];
+                    let charIndex = 0;
+                    // Type out the thought character by character
+                    const typeInterval = setInterval({
+                        "NeuralStream.useEffect.generateThought.typeInterval": ()=>{
+                            if (charIndex <= thought.length) {
+                                setCurrentThought(thought.slice(0, charIndex));
+                                charIndex++;
+                            } else {
+                                clearInterval(typeInterval);
+                                // Hold the thought for a moment, then clear
+                                setTimeout({
+                                    "NeuralStream.useEffect.generateThought.typeInterval": ()=>{
+                                        setCurrentThought("");
+                                        setIsTyping(false);
+                                    }
+                                }["NeuralStream.useEffect.generateThought.typeInterval"], 2000);
+                            }
+                        }
+                    }["NeuralStream.useEffect.generateThought.typeInterval"], 50);
+                }
+            }["NeuralStream.useEffect.generateThought"];
+            // Generate first thought after a delay
+            const initialDelay = setTimeout({
+                "NeuralStream.useEffect.initialDelay": ()=>{
+                    generateThought();
+                }
+            }["NeuralStream.useEffect.initialDelay"], 3000);
+            // Then generate random thoughts periodically
+            const thoughtInterval = setInterval({
+                "NeuralStream.useEffect.thoughtInterval": ()=>{
+                    if (!isTyping && Math.random() > 0.3) {
+                        generateThought();
+                    }
+                }
+            }["NeuralStream.useEffect.thoughtInterval"], 8000);
+            return ({
+                "NeuralStream.useEffect": ()=>{
+                    clearTimeout(initialDelay);
+                    clearInterval(thoughtInterval);
+                }
+            })["NeuralStream.useEffect"];
+        }
+    }["NeuralStream.useEffect"], [
+        isLive,
+        isTyping
+    ]);
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_react$2d$dom$40$19$2e$2$2e$0_react$40$19$2e$2$2e$0_$5f$react$40$19$2e$2$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
         "NeuralStream.useEffect": ()=>{
             if (scrollRef.current) {
@@ -625,8 +720,8 @@ function NeuralStream({ actions = [], isLive = false }) {
     ]);
     const getTypeColor = (type)=>{
         switch(type){
-            case "roast":
-            case "auto_roast":
+            case "verdict":
+            case "auto_verdict":
                 return "text-[#ff5f56]";
             case "analyze":
             case "auto_analyze":
@@ -642,7 +737,9 @@ function NeuralStream({ actions = [], isLive = false }) {
                 return "text-[#ff9f0a]";
             case "mention_reply":
             case "manual_reply":
-                return "text-[#bf5af2]";
+                return "text-[#28c840]";
+            case "ban":
+                return "text-[#ff453a]";
             default:
                 return "text-foreground";
         }
@@ -676,7 +773,7 @@ function NeuralStream({ actions = [], isLive = false }) {
                             children: "~"
                         }, void 0, false, {
                             fileName: "[project]/components/neural-stream.tsx",
-                            lineNumber: 73,
+                            lineNumber: 153,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_react$2d$dom$40$19$2e$2$2e$0_react$40$19$2e$2$2e$0_$5f$react$40$19$2e$2$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -684,7 +781,7 @@ function NeuralStream({ actions = [], isLive = false }) {
                             children: "neural_stream --tail -f"
                         }, void 0, false, {
                             fileName: "[project]/components/neural-stream.tsx",
-                            lineNumber: 74,
+                            lineNumber: 154,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_react$2d$dom$40$19$2e$2$2e$0_react$40$19$2e$2$2e$0_$5f$react$40$19$2e$2$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -694,96 +791,139 @@ function NeuralStream({ actions = [], isLive = false }) {
                                     className: `w-1.5 h-1.5 rounded-full ${isLive ? 'bg-[#28c840] animate-pulse' : 'bg-muted-foreground/40'}`
                                 }, void 0, false, {
                                     fileName: "[project]/components/neural-stream.tsx",
-                                    lineNumber: 76,
+                                    lineNumber: 156,
                                     columnNumber: 13
                                 }, this),
                                 isLive ? 'LIVE' : 'OFFLINE'
                             ]
                         }, void 0, true, {
                             fileName: "[project]/components/neural-stream.tsx",
-                            lineNumber: 75,
+                            lineNumber: 155,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/components/neural-stream.tsx",
-                    lineNumber: 72,
+                    lineNumber: 152,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/components/neural-stream.tsx",
-                lineNumber: 71,
+                lineNumber: 151,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_react$2d$dom$40$19$2e$2$2e$0_react$40$19$2e$2$2e$0_$5f$react$40$19$2e$2$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                 ref: scrollRef,
                 className: "h-64 overflow-y-auto space-y-2 pr-2",
                 children: [
-                    ...displayActions
-                ].reverse().slice(0, 15).map((action, index)=>{
-                    const details = action.details;
-                    const hasTextContent = details?.roast_text || details?.analysis_text || details?.reply_text;
-                    const textContent = details?.roast_text?.slice(0, 100) || details?.analysis_text?.slice(0, 100) || details?.reply_text?.slice(0, 100);
-                    const isOverflow = (details?.roast_text?.length ?? 0) > 100 || (details?.analysis_text?.length ?? 0) > 100 || (details?.reply_text?.length ?? 0) > 100;
-                    return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_react$2d$dom$40$19$2e$2$2e$0_react$40$19$2e$2$2e$0_$5f$react$40$19$2e$2$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                        className: "group py-2 border-b border-border/10 last:border-0",
-                        children: [
-                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_react$2d$dom$40$19$2e$2$2e$0_react$40$19$2e$2$2e$0_$5f$react$40$19$2e$2$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                className: "flex items-start gap-3 text-xs",
-                                children: [
-                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_react$2d$dom$40$19$2e$2$2e$0_react$40$19$2e$2$2e$0_$5f$react$40$19$2e$2$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                        className: "text-muted-foreground/40 shrink-0 tabular-nums",
-                                        children: formatTimestamp(action.timestamp)
-                                    }, void 0, false, {
-                                        fileName: "[project]/components/neural-stream.tsx",
-                                        lineNumber: 95,
-                                        columnNumber: 17
-                                    }, this),
-                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_react$2d$dom$40$19$2e$2$2e$0_react$40$19$2e$2$2e$0_$5f$react$40$19$2e$2$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                        className: `${getTypeColor(action.type)} leading-relaxed`,
-                                        children: action.description
-                                    }, void 0, false, {
-                                        fileName: "[project]/components/neural-stream.tsx",
-                                        lineNumber: 98,
-                                        columnNumber: 17
-                                    }, this)
-                                ]
-                            }, void 0, true, {
-                                fileName: "[project]/components/neural-stream.tsx",
-                                lineNumber: 94,
-                                columnNumber: 15
-                            }, this),
-                            action.details && Object.keys(action.details).length > 0 && hasTextContent && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_react$2d$dom$40$19$2e$2$2e$0_react$40$19$2e$2$2e$0_$5f$react$40$19$2e$2$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                className: "mt-1 ml-16 text-xs text-muted-foreground/60 italic",
-                                children: [
-                                    textContent,
-                                    isOverflow ? '...' : ''
-                                ]
-                            }, void 0, true, {
-                                fileName: "[project]/components/neural-stream.tsx",
-                                lineNumber: 103,
-                                columnNumber: 17
-                            }, this)
-                        ]
-                    }, `${action.timestamp}-${index}`, true, {
+                    [
+                        ...displayActions
+                    ].reverse().slice(0, 15).map((action, index)=>{
+                        const details = action.details;
+                        const hasTextContent = details?.verdict_text || details?.analysis_text || details?.reply_text;
+                        const textContent = details?.verdict_text?.slice(0, 100) || details?.analysis_text?.slice(0, 100) || details?.reply_text?.slice(0, 100);
+                        const isOverflow = (details?.verdict_text?.length ?? 0) > 100 || (details?.analysis_text?.length ?? 0) > 100 || (details?.reply_text?.length ?? 0) > 100;
+                        return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_react$2d$dom$40$19$2e$2$2e$0_react$40$19$2e$2$2e$0_$5f$react$40$19$2e$2$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                            className: "group py-2 border-b border-border/10 last:border-0",
+                            children: [
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_react$2d$dom$40$19$2e$2$2e$0_react$40$19$2e$2$2e$0_$5f$react$40$19$2e$2$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                    className: "flex items-start gap-3 text-xs",
+                                    children: [
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_react$2d$dom$40$19$2e$2$2e$0_react$40$19$2e$2$2e$0_$5f$react$40$19$2e$2$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                            className: "text-muted-foreground/40 shrink-0 tabular-nums",
+                                            children: formatTimestamp(action.timestamp)
+                                        }, void 0, false, {
+                                            fileName: "[project]/components/neural-stream.tsx",
+                                            lineNumber: 175,
+                                            columnNumber: 17
+                                        }, this),
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_react$2d$dom$40$19$2e$2$2e$0_react$40$19$2e$2$2e$0_$5f$react$40$19$2e$2$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                            className: `${getTypeColor(action.type)} leading-relaxed`,
+                                            children: action.description
+                                        }, void 0, false, {
+                                            fileName: "[project]/components/neural-stream.tsx",
+                                            lineNumber: 178,
+                                            columnNumber: 17
+                                        }, this)
+                                    ]
+                                }, void 0, true, {
+                                    fileName: "[project]/components/neural-stream.tsx",
+                                    lineNumber: 174,
+                                    columnNumber: 15
+                                }, this),
+                                action.details && Object.keys(action.details).length > 0 && hasTextContent && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_react$2d$dom$40$19$2e$2$2e$0_react$40$19$2e$2$2e$0_$5f$react$40$19$2e$2$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                    className: "mt-1 ml-16 text-xs text-muted-foreground/60 italic",
+                                    children: [
+                                        textContent,
+                                        isOverflow ? '...' : ''
+                                    ]
+                                }, void 0, true, {
+                                    fileName: "[project]/components/neural-stream.tsx",
+                                    lineNumber: 183,
+                                    columnNumber: 17
+                                }, this)
+                            ]
+                        }, `${action.timestamp}-${index}`, true, {
+                            fileName: "[project]/components/neural-stream.tsx",
+                            lineNumber: 173,
+                            columnNumber: 13
+                        }, this);
+                    }),
+                    isLive && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_react$2d$dom$40$19$2e$2$2e$0_react$40$19$2e$2$2e$0_$5f$react$40$19$2e$2$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                        className: "py-2 border-b border-border/10",
+                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_react$2d$dom$40$19$2e$2$2e$0_react$40$19$2e$2$2e$0_$5f$react$40$19$2e$2$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                            className: "flex items-start gap-3 text-xs",
+                            children: [
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_react$2d$dom$40$19$2e$2$2e$0_react$40$19$2e$2$2e$0_$5f$react$40$19$2e$2$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                    className: "text-muted-foreground/40 shrink-0 tabular-nums",
+                                    children: "···"
+                                }, void 0, false, {
+                                    fileName: "[project]/components/neural-stream.tsx",
+                                    lineNumber: 195,
+                                    columnNumber: 15
+                                }, this),
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_react$2d$dom$40$19$2e$2$2e$0_react$40$19$2e$2$2e$0_$5f$react$40$19$2e$2$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                    className: "text-[#28c840]/70 leading-relaxed font-mono",
+                                    children: [
+                                        currentThought,
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_react$2d$dom$40$19$2e$2$2e$0_react$40$19$2e$2$2e$0_$5f$react$40$19$2e$2$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                            className: `inline-block w-[2px] h-[14px] bg-[#28c840] ml-[1px] align-middle transition-opacity duration-100 ${showCursor ? 'opacity-100' : 'opacity-0'}`
+                                        }, void 0, false, {
+                                            fileName: "[project]/components/neural-stream.tsx",
+                                            lineNumber: 200,
+                                            columnNumber: 17
+                                        }, this)
+                                    ]
+                                }, void 0, true, {
+                                    fileName: "[project]/components/neural-stream.tsx",
+                                    lineNumber: 198,
+                                    columnNumber: 15
+                                }, this)
+                            ]
+                        }, void 0, true, {
+                            fileName: "[project]/components/neural-stream.tsx",
+                            lineNumber: 194,
+                            columnNumber: 13
+                        }, this)
+                    }, void 0, false, {
                         fileName: "[project]/components/neural-stream.tsx",
-                        lineNumber: 93,
-                        columnNumber: 13
-                    }, this);
-                })
-            }, void 0, false, {
+                        lineNumber: 193,
+                        columnNumber: 11
+                    }, this)
+                ]
+            }, void 0, true, {
                 fileName: "[project]/components/neural-stream.tsx",
-                lineNumber: 82,
+                lineNumber: 162,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/components/neural-stream.tsx",
-        lineNumber: 70,
+        lineNumber: 150,
         columnNumber: 5
     }, this);
 }
-_s(NeuralStream, "P14GFulhWAl/Oec4Pk4QeBwKyr0=");
+_s(NeuralStream, "vbpLD0kDOJTYVGbqKuQ7Mu1MYsw=");
 _c = NeuralStream;
 var _c;
 __turbopack_context__.k.register(_c, "NeuralStream");
